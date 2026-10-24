@@ -1,6 +1,6 @@
 import json, io
 import pandas as pd, altair as alt, streamlit as st
-from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step
+from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback
 from storage import Store, _secret
 
 st.set_page_config(page_title="Harbor City: A Ban on Paper", page_icon="\U0001F6CD", layout="centered")
@@ -16,10 +16,11 @@ def get_store(): return Store()
 store = get_store()
 
 def replay(rows):
-    st_ = dict(START); hist = []; outs = []
+    st_ = dict(START); hist = []; outs = []; befores = []; priors = []
     for r in sorted(rows, key=lambda r: r["rnd"]):
+        befores.append(dict(st_)); priors.append([set(h) for h in hist])
         st_, o = step(st_, r["moves"], r["rnd"], hist); hist.append(set(r["moves"])); outs.append(o)
-    return st_, outs
+    return st_, outs, befores, priors
 
 def metric_row(o, label=""):
     c1, c2, c3 = st.columns(3)
@@ -79,13 +80,24 @@ if not team:
     st.stop()
 
 rows = store.team_rounds(team)
-state, outs = replay(rows)
+state, outs, befores, priors = replay(rows)
+all_rows = store.all_rounds()
 done = len(rows); nxt = done + 1
 open_rounds = int(store.get_setting("open_rounds", "0"))
 st.markdown(f"**Team:** {team}")
 for i, o in enumerate(outs, start=1):
     with st.expander(f"Quarter {i} result: {o['circ']*100:.0f}% of bags still circulating", expanded=(i == done and done < 3)):
         st.write("Moves: " + (", ".join(LABEL[m] for m in rows[i-1]["moves"]) or "none")); metric_row(o)
+        got, nxt_q = feedback(i, rows[i-1]["moves"], befores[i-1], o, priors[i-1], ROUNDS[i]["budget"])
+        st.markdown("**What happened**\n\n" + "\n".join(f"- {g}" for g in got))
+        peers = [r for r in all_rows if r["rnd"] == i]
+        if len(peers) >= 2:
+            avg = sum(r["circ"] for r in peers) / len(peers) * 100
+            better = sum(1 for r in peers if r["circ"] < o["circ"] - 1e-9)
+            st.markdown(f"**Compared with the class** ({len(peers)} teams so far): average {avg:.0f}% of bags circulating; yours {o['circ']*100:.0f}%. "
+                        f"{better} team{'s' if better != 1 else ''} did better on circulation this quarter.")
+        if i < 3:
+            st.markdown("**Think about before the next quarter**\n\n" + "\n".join(f"- {q}" for q in nxt_q))
 
 if done >= 3:
     st.success(f"All three quarters complete. Total score: {sum(o['score'] for o in outs):.0f}")

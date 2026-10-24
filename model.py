@@ -67,3 +67,61 @@ def all_plans(budget):
         mv = {keys[i] for i in range(len(keys)) if mask >> i & 1}
         if cost_of(mv) <= budget: res.append(frozenset(mv))
     return res
+
+def feedback(rnd, moves, before, out, prior_moves, budget):
+    """Plain-language feedback for one quarter. before = state before the quarter; out = step() output.
+    Returns (what_happened: list[str], think_next: list[str])."""
+    mv = set(moves)
+    b_circ = before["s"] * (1 - before["c"])
+    a_circ = out["circ"]
+    prior_I = sum(1 for h in prior_moves if "inspect" in h)
+    prior_M = sum(1 for h in prior_moves if "marshals" in h)
+    got = []
+    d = (b_circ - a_circ) * 100
+    if abs(d) < 1:
+        got.append(f"Bags circulating barely moved: {b_circ*100:.0f}% to {a_circ*100:.0f}%.")
+    elif d > 0:
+        got.append(f"Bags circulating fell from {b_circ*100:.0f}% to {a_circ*100:.0f}%.")
+    else:
+        got.append(f"Bags circulating rose from {b_circ*100:.0f}% to {a_circ*100:.0f}%.")
+    # upstream supply
+    if "factory" in mv:
+        got.append("Upstream: checks on factories and importers cut the supply of bags" + (" and blocked most of the smuggling." if rnd >= 2 else "."))
+    elif rnd >= 2:
+        got.append("Upstream: you did not check importers, so smuggled bags refilled the supply.")
+    else:
+        got.append("Upstream: no checks on factories or importers, so bags kept flowing in.")
+    # stalls
+    if "subsidy" in mv:
+        got.append(f"Subsidies narrowed the cost gap; substitute affordability is now {out['afford']*100:.0f}.")
+    elif out["afford"] < 0.6:
+        got.append("Substitutes still cost far more than bags, so stall owners have little reason to switch.")
+    if "inspect" in mv:
+        got.append("Inspections raised compliance" + (", but stalls adapt and repeat inspections work less each time." if prior_I else ", though inspectors are few."))
+    if "fines" in mv and "inspect" not in mv:
+        got.append("Fines without inspections rarely bite, because nobody is checking.")
+    if "fines" in mv and "subsidy" not in mv and out["afford"] < 0.6:
+        got.append("Fining stall owners who cannot afford substitutes caused hardship and cost public trust.")
+    if "marshals" in mv:
+        got.append("Local bag marshals built community norms" + (", and the effect grows the longer you keep them." if prior_M else "; this works slowly but compounds."))
+    if "campaign" in mv:
+        got.append("The campaign worked better with local messengers." if "marshals" in mv else "A campaign alone does little without local messengers.")
+    if not (mv & {"inspect", "fines", "marshals", "campaign", "subsidy"}):
+        got.append("With no pressure on stalls, compliance relapses about 12% a quarter.")
+    if out["hardship"] > 0.40:
+        got.append(f"Stall-owner hardship is high ({out['hardship']*100:.0f}).")
+    if out["trust"] < before["t"] - 0.01:
+        got.append("Public trust fell.")
+    left = budget - cost_of(mv)
+    if left > 0:
+        got.append(f"You left {left} point{'s' if left != 1 else ''} unspent.")
+    nxt = []
+    if rnd == 1:
+        nxt = ["Next quarter smuggling begins. Where do the bags actually come from?",
+               "Which of your moves will still be working in six months, and which fade?"]
+    elif rnd == 2:
+        nxt = ["The budget drops to 8 points. Which moves have lasting effects, and which need to be repeated?",
+               "Did anything you did hurt stall owners or public trust?"]
+    else:
+        nxt = ["Which one move would you keep if the budget were cut again?"]
+    return got, nxt
