@@ -5,7 +5,7 @@ from storage import Store, _secret
 import sheets, os
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1DwOPsDAOzUhm7NuFwIzglSBxBdMwmSSJ9RAT3zrjudA/edit"
 
-st.set_page_config(page_title="Harbor City: A Ban on Paper", page_icon="\U0001F6CD", layout="centered")
+st.set_page_config(page_title="Harbor City: Enforcing the Bag Ban", page_icon="\U0001F6CD", layout="centered")
 NAVY, CORAL, GOLD, TEAL, BLUE, VIOLET = "#1F2A44", "#E8695A", "#E3A92B", "#2A9D8F", "#3B6FB6", "#7B5EA7"
 st.markdown("""<style>
 h1,h2,h3{font-family:Cambria,Georgia,serif;color:#1F2A44}

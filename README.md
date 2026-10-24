@@ -1,4 +1,4 @@
-# Harbor City: A Ban on Paper (BSAD 360, Oct 26)
+# Harbor City: Enforcing the Bag Ban (BSAD 360, Oct 26)
 
 A three-quarter enforcement simulation for pairs. Harbor City (1.2 million people, invented) banned thin plastic bags six months ago, and 80% of bags still circulate. Each quarter a team spends points on six moves (the same menu as the class activity):
 
