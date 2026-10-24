@@ -3,6 +3,7 @@ import pandas as pd, altair as alt, streamlit as st
 from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback
 from storage import Store, _secret
 import sheets
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1DwOPsDAOzUhm7NuFwIzglSBxBdMwmSSJ9RAT3zrjudA/edit"
 
 st.set_page_config(page_title="Harbor City: A Ban on Paper", page_icon="\U0001F6CD", layout="centered")
 NAVY, CORAL, GOLD, TEAL, BLUE, VIOLET = "#1F2A44", "#E8695A", "#E3A92B", "#2A9D8F", "#3B6FB6", "#7B5EA7"
@@ -37,6 +38,7 @@ if mode == "Instructor":
     pw = st.sidebar.text_input("Instructor password", type="password")
     if pw != (_secret("INSTRUCTOR_PASSWORD") or "harbor"):
         st.info("Enter the instructor password in the sidebar."); st.stop()
+    st.link_button("Open the Google Sheet (live results and reflections)", SHEET_URL)
     cur = int(store.get_setting("open_rounds", "0"))
     new = st.select_slider("Quarters open to teams", options=[0, 1, 2, 3], value=cur)
     if new != cur: store.set_setting("open_rounds", new); st.success(f"Quarters open: {new}")
