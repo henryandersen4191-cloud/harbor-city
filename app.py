@@ -38,6 +38,7 @@ if mode == "Instructor":
     pw = st.sidebar.text_input("Instructor password", type="password")
     if pw != (_secret("INSTRUCTOR_PASSWORD") or "harbor"):
         st.info("Enter the instructor password in the sidebar."); st.stop()
+    if st.session_state.pop("cleared", False): st.success("All data deleted: teams, results and reflections are cleared from the app and the Google Sheet.")
     st.link_button("Open the Google Sheet (live results and reflections)", SHEET_URL)
     cur = int(store.get_setting("open_rounds", "0"))
     new = st.select_slider("Quarters open to teams", options=[0, 1, 2, 3], value=cur)
@@ -51,7 +52,7 @@ if mode == "Instructor":
             sheets.push(dict(results=[dict(team="TEST", quarter=0, moves="connection test", points_used=0, bags_circulating_pct=0, hardship=0, trust=0, score=0, updated="test")]), wait=True)
             st.success("Sent. Check the Results tab for a row named TEST, then click Delete everything to remove it.")
         with st.expander("Clear all data"):
-            if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.rerun()
+            if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.session_state['cleared'] = True; st.rerun()
         st.stop()
     df = pd.DataFrame(rows); df["circ_pct"] = df["circ"] * 100
     teams = df.groupby("team").agg(rounds=("rnd", "count"), total=("score", "sum"), circ=("circ", "last"), hardship=("hardship", "last"), trust=("trust", "last")).sort_values("total", ascending=False).reset_index()
@@ -91,7 +92,7 @@ if mode == "Instructor":
     else:
         st.caption("Live Google Sheet not connected (add SHEET_WEBHOOK and SHEET_TOKEN in the app secrets).")
     with st.expander("Clear all data"):
-        if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.rerun()
+        if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.session_state['cleared'] = True; st.rerun()
     st.stop()
 
 # ---------------- Team view ----------------
