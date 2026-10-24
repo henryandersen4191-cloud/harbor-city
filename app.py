@@ -79,7 +79,9 @@ if mode == "Instructor":
     pw = st.sidebar.text_input("Instructor password", type="password")
     if pw != (_secret("INSTRUCTOR_PASSWORD") or "harbor"):
         st.info("Enter the instructor password in the sidebar."); st.stop()
-    if st.session_state.pop("cleared", False): st.success("All data deleted: teams, results and reflections are cleared from the app and the Google Sheet.")
+    just_cleared = st.session_state.pop("cleared", False)
+    CLR_MSG = "All data deleted: teams, results and reflections are cleared from the app and the Google Sheet."
+    if just_cleared: st.success(CLR_MSG); st.toast("All data deleted", icon="\u2705")
     st.link_button("Open the projector view (put this on the main screen)", "https://harbor-city-bsad360.streamlit.app/?view=projector")
     st.link_button("Open the Google Sheet (live results and reflections)", SHEET_URL)
     sp_cur = store.get_setting("self_paced", "0") == "1"
@@ -96,7 +98,8 @@ if mode == "Instructor":
         if sheets.enabled() and st.button("Send a test row to the Google Sheet"):
             sheets.push(dict(results=[dict(team="TEST", quarter=0, moves="connection test", points_used=0, bags_circulating_pct=0, hardship=0, trust=0, score=0, updated="test")]), wait=True)
             st.success("Sent. Check the Results tab for a row named TEST, then click Delete everything to remove it.")
-        with st.expander("Clear all data"):
+        with st.expander("Clear all data", expanded=just_cleared):
+            if just_cleared: st.success(CLR_MSG)
             if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.session_state['cleared'] = True; st.rerun()
         st.stop()
     df = pd.DataFrame(rows); df["circ_pct"] = df["circ"] * 100
@@ -136,12 +139,13 @@ if mode == "Instructor":
             sheets.push(dict(clear=True, results=res, reflections=[dict(team=r["team"], reflection=r["body"], updated="") for r in refl]), wait=True); st.success("Sheet resynced.")
     else:
         st.caption("Live Google Sheet not connected (add SHEET_WEBHOOK and SHEET_TOKEN in the app secrets).")
-    with st.expander("Clear all data"):
+    with st.expander("Clear all data", expanded=just_cleared):
+        if just_cleared: st.success(CLR_MSG)
         if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.session_state['cleared'] = True; st.rerun()
     st.stop()
 
 # ---------------- Team view ----------------
-st.title("Harbor City: a ban on paper")
+st.title("Harbor City: Enforcing the Bag Ban")
 st.caption("An invented city of 1.2 million people. All numbers are teaching assumptions.")
 team = st.session_state.get("team")
 if not team:
