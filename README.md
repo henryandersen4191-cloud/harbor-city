@@ -11,7 +11,7 @@ A three-quarter enforcement simulation for pairs. Harbor City (1.2 million peopl
 | Community "bag marshals" with a local NPO | 2 |
 | Public campaign | 1 |
 
-Budget is 10 points in Quarters 1 and 2 and 8 in Quarter 3 (a new council cuts it). Quarter 2 adds smuggling from the neighboring district. Each quarter reports bags still circulating, stall-owner hardship, public trust, and a score (60% bag reduction, 25% low hardship, 15% trust). All numbers are invented teaching assumptions, tuned so the lessons from Rwanda, India, Ireland and England show up: upstream checks and affordable substitutes beat inspection and fines alone, fines without substitutes backfire, community effects build over time, and compliance relapses when effort drops.
+Budget is 7 points in Quarters 1 and 2 and 5 in Quarter 3 (a new council cuts it). Quarter 2 adds smuggling from the neighboring district. Each quarter reports bags still circulating, stall-owner hardship, public trust, and a score (60% bag reduction, 25% low hardship, 15% trust). All numbers are invented teaching assumptions, tuned so the lessons from Rwanda, India, Ireland and England show up: upstream checks and affordable substitutes beat inspection and fines alone, fines without substitutes backfire, community effects build over time, and compliance relapses when effort drops.
 
 ## Files
 app.py (team view + instructor dashboard), model.py (the model), storage.py (Supabase, with a local SQLite fallback for testing), schema.sql, requirements.txt, secrets.toml.example, .streamlit/config.toml (HAPS colors).
@@ -35,4 +35,4 @@ app.py (team view + instructor dashboard), model.py (the model), storage.py (Sup
 4. What did you keep after the budget cut, and what did you drop? Link to Brazil: what keeps enforcement going when politics change?
 
 ## Balance notes
-A sweep of all 133,100 three-quarter plans shows the best totals use factory checks, subsidies, marshals and the campaign, with inspection mixed in; fines alone score below doing nothing. Spending the same points on inspection plus fines plus campaign leaves about 40% of bags circulating at the end. Teams that find the upstream-plus-affordability mix land around 6 to 15%.
+With budgets of 7, 7 and 5 points, a sweep of all 24,500 three-quarter plans shows the best plan (about 219 points, 20% of bags left) is a sequencing choice: a subsidy once in Quarter 1 because its effect lasts, factory checks in every quarter, and marshals from Quarter 2. Factory checks alone score about 191, so upstream checks are the strongest single lever. Inspection plus fines every quarter scores about 137 and leaves about half of bags circulating; fines alone score 108, below doing nothing (115). Near-best plans (within 5% of the top) end with 19 to 38% of bags circulating.

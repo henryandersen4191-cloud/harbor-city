@@ -10,9 +10,9 @@ MOVES = [
 COST = {k: c for k, _, c in MOVES}
 LABEL = {k: n for k, n, _ in MOVES}
 ROUNDS = {
-    1: dict(name="Quarter 1", budget=10, event="Six months after the ban, 80% of bags still circulate. Stall owners say substitutes cost three times as much."),
-    2: dict(name="Quarter 2", budget=10, event="Bags are being smuggled in from the neighboring district. Importers who are not checked start to refill the supply."),
-    3: dict(name="Quarter 3", budget=8,  event="A new council cuts the enforcement budget to 8 points. Keep what works going with less."),
+    1: dict(name="Quarter 1", budget=7, event="Six months after the ban, 80% of bags still circulate. Stall owners say substitutes cost three times as much."),
+    2: dict(name="Quarter 2", budget=7, event="Bags are being smuggled in from the neighboring district. Importers who are not checked start to refill the supply."),
+    3: dict(name="Quarter 3", budget=5,  event="A new council cuts the enforcement budget to 5 points. Keep what works going with less."),
 }
 START = dict(c=0.20, s=1.00, a=0.33, t=0.50)  # stall compliance, bag supply, affordability, public trust
 
@@ -120,7 +120,7 @@ def feedback(rnd, moves, before, out, prior_moves, budget):
         nxt = ["Next quarter smuggling begins. Where do the bags actually come from?",
                "Which of your moves will still be working in six months, and which fade?"]
     elif rnd == 2:
-        nxt = ["The budget drops to 8 points. Which moves have lasting effects, and which need to be repeated?",
+        nxt = ["The budget drops to 5 points. Which moves have lasting effects, and which need to be repeated?",
                "Did anything you did hurt stall owners or public trust?"]
     else:
         nxt = ["Which one move would you keep if the budget were cut again?"]
