@@ -41,7 +41,16 @@ if mode == "Instructor":
     new = st.select_slider("Quarters open to teams", options=[0, 1, 2, 3], value=cur)
     if new != cur: store.set_setting("open_rounds", new); st.success(f"Quarters open: {new}")
     rows = store.all_rounds()
-    if not rows: st.write("No submissions yet."); st.stop()
+    if not rows:
+        st.write("No submissions yet.")
+        st.subheader("Google Sheet")
+        st.caption("Live Google Sheet connected. Rows appear as teams submit." if sheets.enabled() else "Live Google Sheet not connected (add SHEET_WEBHOOK and SHEET_TOKEN in the app secrets).")
+        if sheets.enabled() and st.button("Send a test row to the Google Sheet"):
+            sheets.push(dict(results=[dict(team="TEST", quarter=0, moves="connection test", points_used=0, bags_circulating_pct=0, hardship=0, trust=0, score=0, updated="test")]), wait=True)
+            st.success("Sent. Check the Results tab for a row named TEST, then click Delete everything to remove it.")
+        with st.expander("Clear all data"):
+            if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.rerun()
+        st.stop()
     df = pd.DataFrame(rows); df["circ_pct"] = df["circ"] * 100
     teams = df.groupby("team").agg(rounds=("rnd", "count"), total=("score", "sum"), circ=("circ", "last"), hardship=("hardship", "last"), trust=("trust", "last")).sort_values("total", ascending=False).reset_index()
     lb = teams.copy(); lb["total"] = lb["total"].round(0).astype(int)
