@@ -1,6 +1,6 @@
 import json, io
 import pandas as pd, altair as alt, streamlit as st
-from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback
+from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback, headline, reactions
 from storage import Store, _secret
 import sheets, os
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1DwOPsDAOzUhm7NuFwIzglSBxBdMwmSSJ9RAT3zrjudA/edit"
@@ -23,6 +23,12 @@ def pic(name, caption=None):
 
 ICON = {"inspect": "\U0001F50D", "factory": "\U0001F3ED", "subsidy": "\U0001F4B5", "fines": "\U0001F4DD", "marshals": "\U0001F91D", "campaign": "\U0001F4E3"}
 
+def rank_info(all_rows, q, team):
+    qs = sorted([r for r in all_rows if r["rnd"] == q], key=lambda r: -r["score"])
+    mine = next((r for r in qs if r["team"] == team), None)
+    if not mine: return qs, None
+    return qs, 1 + sum(1 for r in qs if r["score"] > mine["score"] + 1e-9)
+
 def replay(rows):
     st_ = dict(START); hist = []; outs = []; befores = []; priors = []
     for r in sorted(rows, key=lambda r: r["rnd"]):
@@ -36,8 +42,37 @@ def metric_row(o, label=""):
     c2.metric("Stall-owner hardship", f"{o['hardship']*100:.0f}")
     c3.metric("Public trust", f"{o['trust']*100:.0f}")
 
-mode = st.sidebar.radio("View", ["Team", "Instructor"])
+_opts = ["Team", "Instructor", "Projector"]
+_idx = 2 if st.query_params.get("view") == "projector" else 0
+mode = st.sidebar.radio("View", _opts, index=_idx)
 st.sidebar.caption("Storage: " + store.mode)
+
+if mode == "Projector":
+    st.markdown("<style>.block-container{max-width:1200px} h1{font-size:3rem}</style>", unsafe_allow_html=True)
+    @st.fragment(run_every=5)
+    def projector():
+        rows = store.all_rounds()
+        st.title("Harbor City: live results")
+        if not rows:
+            st.markdown("### Waiting for the first teams to submit Quarter 1...")
+            return
+        df = pd.DataFrame(rows); df["circ_pct"] = df["circ"] * 100
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Teams playing", df["team"].nunique())
+        for col, q in zip((c2, c3, c4), (1, 2, 3)):
+            col.metric(f"Finished Quarter {q}", int((df["rnd"] == q).sum()))
+        lb = df.groupby("team").agg(quarters=("rnd", "count"), total=("score", "sum"), circ=("circ", "last")).reset_index().sort_values(["total"], ascending=False).head(8)
+        lb["total"] = lb["total"].round(0).astype(int); lb["circ"] = (lb["circ"] * 100).round(0).astype(int)
+        lb.insert(0, "rank", range(1, len(lb) + 1))
+        st.subheader("Leaderboard (total points so far)")
+        st.dataframe(lb.rename(columns={"circ": "bags circulating % (latest)", "total": "total points", "quarters": "quarters done"}), hide_index=True, width="stretch")
+        avg = df.groupby("rnd")["circ_pct"].mean().reset_index()
+        grey = alt.Chart(df).mark_line(color="#9aa4b8", opacity=0.45).encode(x=alt.X("rnd:O", title="Quarter"), y=alt.Y("circ_pct:Q", title="Bags still circulating (%)", scale=alt.Scale(domain=[0, 100])), detail="team:N")
+        mean = alt.Chart(avg).mark_line(color=CORAL, strokeWidth=5, point=True).encode(x="rnd:O", y="circ_pct:Q")
+        st.subheader("Bags in circulation by quarter (grey = each team, red = class average)")
+        st.altair_chart(grey + mean, width="stretch")
+    projector()
+    st.stop()
 
 if mode == "Instructor":
     st.title("Instructor dashboard")
@@ -45,6 +80,7 @@ if mode == "Instructor":
     if pw != (_secret("INSTRUCTOR_PASSWORD") or "harbor"):
         st.info("Enter the instructor password in the sidebar."); st.stop()
     if st.session_state.pop("cleared", False): st.success("All data deleted: teams, results and reflections are cleared from the app and the Google Sheet.")
+    st.link_button("Open the projector view (put this on the main screen)", "https://harbor-city-bsad360.streamlit.app/?view=projector")
     st.link_button("Open the Google Sheet (live results and reflections)", SHEET_URL)
     sp_cur = store.get_setting("self_paced", "0") == "1"
     sp_new = st.toggle("Self-paced: teams start each quarter as soon as they finish the last one", value=sp_cur)
@@ -125,8 +161,10 @@ st.markdown(f"**Team:** {team}")
 for i, o in enumerate(outs, start=1):
     with st.expander(f"Quarter {i} result: {o['circ']*100:.0f}% of bags still circulating", expanded=(i == done and done < 3)):
         st.write("Moves: " + (", ".join(LABEL[m] for m in rows[i-1]["moves"]) or "none")); metric_row(o)
+        st.markdown(f"<div class='card' style='background:{CORAL};font-family:Cambria,Georgia,serif;font-size:1.15rem'>\U0001F4F0 <b>{headline(i, rows[i-1]['moves'], befores[i-1], o)}</b></div>", unsafe_allow_html=True)
         got, nxt_q = feedback(i, rows[i-1]["moves"], befores[i-1], o, priors[i-1], ROUNDS[i]["budget"])
         st.markdown("**What happened**\n\n" + "\n".join(f"- {g}" for g in got))
+        st.markdown("**What people are saying**\n\n" + "\n".join(f"> \u201c{q}\u201d  \n> *{who}*\n" for who, q in reactions(i, rows[i-1]["moves"], befores[i-1], o)))
         peers = [r for r in all_rows if r["rnd"] == i]
         if len(peers) >= 2:
             avg = sum(r["circ"] for r in peers) / len(peers) * 100
@@ -135,6 +173,21 @@ for i, o in enumerate(outs, start=1):
                         f"{better} team{'s' if better != 1 else ''} did better on circulation this quarter.")
         if i < 3:
             st.markdown("**Think about before the next quarter**\n\n" + "\n".join(f"- {q}" for q in nxt_q))
+
+if done >= 1:
+    @st.fragment(run_every=10)
+    def leaderboard(q, me):
+        qs, rk = rank_info(store.all_rounds(), q, me)
+        st.subheader(f"Class leaderboard: Quarter {q}")
+        medals = ["\U0001F947", "\U0001F948", "\U0001F949"]
+        for i, r in enumerate(qs[:3]):
+            mark = "  **(you)**" if r["team"] == me else ""
+            st.markdown(f"{medals[i]} **{r['team']}**: {r['score']:.0f} points, {r['circ']*100:.0f}% of bags still circulating{mark}")
+        if rk and rk > 3:
+            mine = next(r for r in qs if r["team"] == me)
+            st.markdown(f"**You are #{rk} of {len(qs)} teams** this quarter: {mine['score']:.0f} points, {mine['circ']*100:.0f}% of bags circulating.")
+        st.caption(f"{len(qs)} team{'s' if len(qs) != 1 else ''} have finished Quarter {q}. This updates every few seconds.")
+    leaderboard(done, team)
 
 if done >= 3:
     pic("hc_done.jpg")

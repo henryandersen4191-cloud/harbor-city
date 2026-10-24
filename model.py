@@ -125,3 +125,56 @@ def feedback(rnd, moves, before, out, prior_moves, budget):
     else:
         nxt = ["Which one move would you keep if the budget were cut again?"]
     return got, nxt
+
+def headline(rnd, moves, before, out):
+    """One newspaper-style headline for the quarter."""
+    mv = set(moves)
+    circ, hard, trust, aff = out["circ"], out["hardship"], out["trust"], out["afford"]
+    if rnd >= 2 and "factory" not in mv and circ > 0.40:
+        return "Smuggled bags flood Harbor City markets"
+    if "fines" in mv and "subsidy" not in mv and hard > 0.45:
+        return "Stall owners protest as fines bite"
+    if circ < 0.15:
+        return "Harbor City's markets go nearly bag-free"
+    if "subsidy" in mv and "factory" in mv and circ < 0.35:
+        return "Cheaper substitutes and port checks turn the tide"
+    if "marshals" in mv and trust >= 0.55:
+        return "Neighborhood bag marshals win public trust"
+    if circ < 0.30:
+        return "Bag use plunges across Harbor City"
+    if "inspect" in mv and not (mv & {"factory", "subsidy"}):
+        return "Inspectors on every corner, but bags still in sight"
+    if trust < before["t"] - 0.01:
+        return "Public confidence in the bag ban slips"
+    if rnd == 3:
+        return "Budget cut puts Harbor City's ban to the test"
+    return "Harbor City's bag ban: progress is slow"
+
+def reactions(rnd, moves, before, out):
+    """Three short stakeholder quotes: (who, quote)."""
+    mv = set(moves)
+    if "subsidy" in mv and "marshals" in mv:
+        so = "The substitutes cost something I can live with, and my neighbors asked me to switch. I did."
+    elif "subsidy" in mv:
+        so = "The substitutes finally cost something I can live with."
+    elif "marshals" in mv:
+        so = "A neighbor asked me to stop using bags. That meant more than any inspector."
+    elif "fines" in mv and out["afford"] < 0.6:
+        so = "You fine me for a bag I cannot afford to replace."
+    elif "inspect" in mv:
+        so = "The inspectors come by, but the alternatives still cost too much."
+    else:
+        so = "Nobody checks and nothing has changed for me."
+    if "marshals" in mv:
+        npo = "Local volunteers are building a habit. It takes time, but it sticks."
+    elif "campaign" in mv:
+        npo = "Posters help only when people hear the message from someone they trust."
+    else:
+        npo = "We would help, but nobody has asked us to."
+    if "factory" in mv:
+        imp = "Checks at the port slowed my shipment, and the bags are harder to move now."
+    elif rnd >= 2:
+        imp = "Nobody stopped my truck. Business as usual."
+    else:
+        imp = "The ban is on paper. Nobody is watching the docks."
+    return [("A stall owner", so), ("A local NPO volunteer leader", npo), ("An importer", imp)]
