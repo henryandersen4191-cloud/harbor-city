@@ -40,8 +40,11 @@ if mode == "Instructor":
         st.info("Enter the instructor password in the sidebar."); st.stop()
     if st.session_state.pop("cleared", False): st.success("All data deleted: teams, results and reflections are cleared from the app and the Google Sheet.")
     st.link_button("Open the Google Sheet (live results and reflections)", SHEET_URL)
+    sp_cur = store.get_setting("self_paced", "0") == "1"
+    sp_new = st.toggle("Self-paced: teams start each quarter as soon as they finish the last one", value=sp_cur)
+    if sp_new != sp_cur: store.set_setting("self_paced", "1" if sp_new else "0"); st.success("Self-paced is ON: all quarters are open." if sp_new else "Self-paced is OFF: you open each quarter with the slider.")
     cur = int(store.get_setting("open_rounds", "0"))
-    new = st.select_slider("Quarters open to teams", options=[0, 1, 2, 3], value=cur)
+    new = st.select_slider("Quarters open to teams (used when self-paced is off)", options=[0, 1, 2, 3], value=cur, disabled=sp_new)
     if new != cur: store.set_setting("open_rounds", new); st.success(f"Quarters open: {new}")
     rows = store.all_rounds()
     if not rows:
@@ -110,7 +113,7 @@ rows = store.team_rounds(team)
 state, outs, befores, priors = replay(rows)
 all_rows = store.all_rounds()
 done = len(rows); nxt = done + 1
-open_rounds = int(store.get_setting("open_rounds", "0"))
+open_rounds = 3 if store.get_setting("self_paced", "0") == "1" else int(store.get_setting("open_rounds", "0"))
 st.markdown(f"**Team:** {team}")
 for i, o in enumerate(outs, start=1):
     with st.expander(f"Quarter {i} result: {o['circ']*100:.0f}% of bags still circulating", expanded=(i == done and done < 3)):
@@ -139,7 +142,7 @@ if nxt > open_rounds:
     st.info(f"Waiting for the instructor to open Quarter {nxt}.")
     @st.fragment(run_every=5)
     def waiter():
-        if int(store.get_setting("open_rounds", "0")) >= nxt: st.rerun()
+        if store.get_setting("self_paced", "0") == "1" or int(store.get_setting("open_rounds", "0")) >= nxt: st.rerun()
     waiter(); st.stop()
 
 R = ROUNDS[nxt]
