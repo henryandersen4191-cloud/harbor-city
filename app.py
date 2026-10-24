@@ -2,7 +2,7 @@ import json, io
 import pandas as pd, altair as alt, streamlit as st
 from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback
 from storage import Store, _secret
-import sheets
+import sheets, os
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1DwOPsDAOzUhm7NuFwIzglSBxBdMwmSSJ9RAT3zrjudA/edit"
 
 st.set_page_config(page_title="Harbor City: A Ban on Paper", page_icon="\U0001F6CD", layout="centered")
@@ -16,6 +16,12 @@ h1,h2,h3{font-family:Cambria,Georgia,serif;color:#1F2A44}
 @st.cache_resource
 def get_store(): return Store()
 store = get_store()
+
+def pic(name, caption=None):
+    if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), name)):
+        st.image(os.path.join(os.path.dirname(os.path.abspath(__file__)), name), caption=caption, width="stretch")
+
+ICON = {"inspect": "\U0001F50D", "factory": "\U0001F3ED", "subsidy": "\U0001F4B5", "fines": "\U0001F4DD", "marshals": "\U0001F91D", "campaign": "\U0001F4E3"}
 
 def replay(rows):
     st_ = dict(START); hist = []; outs = []; befores = []; priors = []
@@ -103,6 +109,7 @@ st.title("Harbor City: a ban on paper")
 st.caption("An invented city of 1.2 million people. All numbers are teaching assumptions.")
 team = st.session_state.get("team")
 if not team:
+    pic("hc_join.jpg", "Harbor City market day. The ban is six months old.")
     st.write("Six months ago Harbor City banned thin plastic bags, but most still circulate. You are the city’s enforcement team. Each quarter you choose how to spend your points. Compare your results with the other teams.")
     name = st.text_input("Team name (one per pair)", max_chars=40)
     if st.button("Start or resume", type="primary") and name.strip():
@@ -130,6 +137,7 @@ for i, o in enumerate(outs, start=1):
             st.markdown("**Think about before the next quarter**\n\n" + "\n".join(f"- {q}" for q in nxt_q))
 
 if done >= 3:
+    pic("hc_done.jpg")
     st.success(f"All three quarters complete. Total score: {sum(o['score'] for o in outs):.0f}")
     st.subheader("Reflection")
     st.write("Which real case did your plan most resemble: Rwanda, India, or the bag charges in Ireland and England? Why?")
@@ -147,13 +155,14 @@ if nxt > open_rounds:
 
 R = ROUNDS[nxt]
 st.header(f"{R['name']}: {R['budget']} points")
+pic({1: "hc_q1.jpg", 2: "hc_q2.jpg", 3: "hc_q3.jpg"}[nxt])
 st.markdown(f"<div class='card' style='background:{NAVY}'>{R['event']}</div>", unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 cur_circ = state["s"] * (1 - state["c"])
 c1.metric("Bags circulating now", f"{cur_circ*100:.0f}%"); c2.metric("Substitute affordability", f"{state['a']*100:.0f}"); c3.metric("Public trust", f"{state['t']*100:.0f}")
 chosen = []
 for k, name_, cost in MOVES:
-    if st.checkbox(f"{name_}  ({cost} pts)", key=f"{team}_{nxt}_{k}"): chosen.append(k)
+    if st.checkbox(f"{ICON[k]}  {name_}  ({cost} pts)", key=f"{team}_{nxt}_{k}"): chosen.append(k)
 used = cost_of(chosen)
 st.progress(min(used / R["budget"], 1.0), text=f"Points used: {used} of {R['budget']}")
 if used > R["budget"]: st.error("Over budget. Remove a move.")
