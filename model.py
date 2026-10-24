@@ -30,7 +30,7 @@ def step(state, moves, rnd, history_moves):
     prior_I = sum(1 for h in history_moves if "inspect" in h)
     prior_M = sum(1 for h in history_moves if "marshals" in h)
     # supply upstream: factory checks cut supply; smuggling in quarter 2+ refills it unless importers are checked
-    s = s * (1 - 0.35 * F)
+    s = s * (1 - 0.30 * F)
     if rnd >= 2:
         s = s + 0.15 * (1 - 0.6 * F)
     s = clip(s, 0.05, 1.0)
