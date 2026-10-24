@@ -62,8 +62,15 @@ if mode == "Instructor":
     if refl:
         st.subheader("Reflections"); 
         for r in refl: st.markdown(f"**{r['team']}**: {r['body']}")
-    out = io.StringIO(); df.drop(columns=["circ_pct", "label"]).assign(moves=df["moves"].map(lambda m: ", ".join(m))).to_csv(out, index=False)
-    st.download_button("Download CSV", out.getvalue(), "harbor_city_results.csv", "text/csv")
+    rmap = {r["team"]: r["body"] for r in refl}
+    full = df.drop(columns=["circ_pct", "label"]).assign(moves=df["moves"].map(lambda m: ", ".join(LABEL[x] for x in m)))
+    full["reflection"] = full["team"].map(rmap).fillna("")
+    full = full.sort_values(["team", "rnd"])
+    out = io.StringIO(); full.to_csv(out, index=False)
+    summ = teams.copy(); summ["reflection"] = summ["team"].map(rmap).fillna("")
+    out2 = io.StringIO(); summ.to_csv(out2, index=False)
+    st.download_button("Download results by quarter, with reflections (CSV for Google Sheets)", out.getvalue(), "harbor_city_results.csv", "text/csv")
+    st.download_button("Download one row per team, with reflections (CSV)", out2.getvalue(), "harbor_city_team_summary.csv", "text/csv")
     with st.expander("Clear all data"):
         if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); st.rerun()
     st.stop()
