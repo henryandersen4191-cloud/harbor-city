@@ -2,6 +2,7 @@ import json, io
 import pandas as pd, altair as alt, streamlit as st
 from model import MOVES, COST, LABEL, ROUNDS, START, cost_of, step, feedback
 from storage import Store, _secret
+import sheets
 
 st.set_page_config(page_title="Harbor City: A Ban on Paper", page_icon="\U0001F6CD", layout="centered")
 NAVY, CORAL, GOLD, TEAL, BLUE, VIOLET = "#1F2A44", "#E8695A", "#E3A92B", "#2A9D8F", "#3B6FB6", "#7B5EA7"
@@ -71,8 +72,15 @@ if mode == "Instructor":
     out2 = io.StringIO(); summ.to_csv(out2, index=False)
     st.download_button("Download results by quarter, with reflections (CSV for Google Sheets)", out.getvalue(), "harbor_city_results.csv", "text/csv")
     st.download_button("Download one row per team, with reflections (CSV)", out2.getvalue(), "harbor_city_team_summary.csv", "text/csv")
+    st.subheader("Google Sheet")
+    if sheets.enabled():
+        if st.button("Resync everything to the Google Sheet"):
+            res = [sheets.result_row(r["team"], r["rnd"], r["moves"], r["points"], dict(circ=r["circ"], hardship=r["hardship"], trust=r["trust"], score=r["score"]), r.get("created")) for r in rows]
+            sheets.push(dict(clear=True, results=res, reflections=[dict(team=r["team"], reflection=r["body"], updated="") for r in refl]), wait=True); st.success("Sheet resynced.")
+    else:
+        st.caption("Live Google Sheet not connected (add SHEET_WEBHOOK and SHEET_TOKEN in the app secrets).")
     with st.expander("Clear all data"):
-        if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); st.rerun()
+        if st.checkbox("Yes, delete every team's data") and st.button("Delete everything"): store.clear(); sheets.push(dict(clear=True), wait=True); st.rerun()
     st.stop()
 
 # ---------------- Team view ----------------
@@ -112,7 +120,7 @@ if done >= 3:
     st.write("Which real case did your plan most resemble: Rwanda, India, or the bag charges in Ireland and England? Why?")
     ex = {r["team"]: r["body"] for r in store.reflections()}.get(team, "")
     body = st.text_area("Your answer", value=ex, height=120)
-    if st.button("Save reflection") and body.strip(): store.save_reflection(team, body.strip()); st.success("Saved. Watch the main screen.")
+    if st.button("Save reflection") and body.strip(): store.save_reflection(team, body.strip()); sheets.push(dict(reflections=[dict(team=team, reflection=body.strip(), updated=__import__('time').strftime('%Y-%m-%d %H:%M:%S'))]), wait=True); st.success("Saved. Watch the main screen.")
     st.stop()
 
 if nxt > open_rounds:
@@ -137,4 +145,5 @@ if used > R["budget"]: st.error("Over budget. Remove a move.")
 if st.button(f"Submit {R['name']}", type="primary", disabled=used > R["budget"]):
     hist = [set(r["moves"]) for r in rows]
     _, o = step(state, chosen, nxt, hist)
-    store.save_round(team, nxt, chosen, used, o); st.rerun()
+    store.save_round(team, nxt, chosen, used, o)
+    sheets.push(dict(results=[sheets.result_row(team, nxt, chosen, used, o)]), wait=True); st.rerun()
